@@ -79,12 +79,12 @@ def create_annotated_image(image, results):
     annotated = image.copy()
     for result in results:
         points = np.array(result[0]).astype(np.int32)
-        text = result[1][0]
-        prob = result[1][1]
+        text = result[1]
+        prob = result[2]
         
         if prob > 0.5:
             cv2.polylines(annotated, [points], True, (0, 255, 0), 2)
             x, y = points[0]
-            cv2.putText(annotated, f"{text}", (x, y-10),
+            cv2.putText(annotated, f"{text}", (int(x), int(y-10)),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
     return annotated 

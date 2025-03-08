@@ -1,29 +1,30 @@
-# Use an official Python runtime as a parent image
-FROM python:3.9-slim
+FROM python:3.10-slim
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    DEBIAN_FRONTEND=noninteractive
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-glx libgomp1 libgeos-dev libopenblas-dev && rm -rf /var/lib/apt/lists/*
-
-# Set working directory
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
+# Install system dependencies required for OpenCV and other packages
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Copy requirements file and install dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create a dummy image for model initialization
-RUN mkdir -p /root/.paddleocr/whl
-# Copy the rest of the application
+# Pre-download the models in CPU mode
+RUN python -c 'from easyocr import Reader; Reader(["de", "fr", "it"], gpu=False)'
+
+# Copy the application code
 COPY . .
+
+# Create directories if they don't exist
+RUN mkdir -p detected_images enhanced detected_results ids card_data
 
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Command to run the application
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Command to run the API
+CMD ["python", "api.py"]

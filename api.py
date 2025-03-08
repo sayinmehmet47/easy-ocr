@@ -105,7 +105,7 @@ async def process_card(
             "status": "success",
             "card_info": card_info.to_dict(),
             "confidence_scores": {
-                result[1][0]: f"{result[1][1]:.2%}" for result in results if result[1][1] > 0.5
+                result[1]: float(result[2]) for result in results if float(result[2]) > 0.5
             },
             "images": {
                 "original": original_image_base64,

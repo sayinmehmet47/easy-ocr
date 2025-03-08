@@ -3,7 +3,7 @@ import os
 import cv2
 import json
 from datetime import datetime
-from paddleocr import PaddleOCR
+import easyocr
 from utils import (
     create_annotated_image,
     FIELD_LABELS,
@@ -46,8 +46,8 @@ def detect_card_language(results):
     language_scores = {lang: 0 for lang in SUPPORTED_LANGUAGES}
     
     for result in results:
-        text = result[1][0]  # PaddleOCR format: [[[points]], [text, confidence]]
-        prob = result[1][1]
+        text = result[1] 
+        prob = result[2]
         
         if prob < 0.4:
             continue
@@ -88,8 +88,8 @@ def extract_card_info(results):
     print(f"\nDetected language: {detected_lang}")
     print("\nDetected text:")
     for result in results:
-        text = result[1][0]
-        prob = result[1][1]
+        text = result[1]
+        prob = result[2]
         print(f"{text} ({prob:.2%})")
     
     detected_values = {}
@@ -97,8 +97,8 @@ def extract_card_info(results):
     
     for idx, result in enumerate(results):
         bbox = result[0]
-        text = result[1][0]
-        prob = result[1][1]
+        text = result[1]
+        prob = result[2]
         
         text = text.strip()
         
@@ -144,7 +144,7 @@ def extract_card_info(results):
             if number and len(number) >= 6:
                 detected_values['insurance_number'] = number
             elif idx + 1 < len(results):
-                next_text = results[idx + 1][1][0].strip()
+                next_text = results[idx + 1][1].strip()
                 number = ''.join(filter(str.isdigit, next_text))
                 if number and len(number) >= 6:
                     detected_values['insurance_number'] = number
@@ -169,8 +169,8 @@ def extract_card_info(results):
             
             # Check if the next text might be the insurance provider name
             if idx + 1 < len(results):
-                next_text = results[idx + 1][1][0].strip()
-                next_prob = results[idx + 1][1][1]
+                next_text = results[idx + 1][1].strip()
+                next_prob = results[idx + 1][2]
                 
                 if next_prob > 0.7 and len(next_text) > 2 and next_text[0].isupper():
                     if not any(c.isdigit() for c in next_text):  # No digits in insurance name
@@ -248,10 +248,10 @@ def process_image_ocr(image):
     Returns:
         results: list of OCR results
     """
+    reader = easyocr.Reader(['de', 'fr', 'it'], gpu=False, download_enabled=False)
     enhanced = enhance_image(image)
-    ocr = PaddleOCR(use_angle_cls=True, lang='latin', show_log=False)
-    results = ocr.ocr(enhanced, cls=True)
-    return results[0] if results else []
+    results = reader.readtext(enhanced)
+    return results
 
 def process_single_image(image_path):
     try:
