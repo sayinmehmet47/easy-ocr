@@ -11,7 +11,6 @@ from utils import (
     EXCLUDED_WORDS,
     SUPPORTED_LANGUAGES,
     logger,
-    enhance_image
 )
 
 class HealthCardInfo:
@@ -248,9 +247,8 @@ def process_image_ocr(image):
     Returns:
         results: list of OCR results
     """
-    reader = easyocr.Reader(['de', 'fr', 'it'], gpu=False, download_enabled=False)
-    enhanced = enhance_image(image)
-    results = reader.readtext(enhanced)
+    reader = easyocr.Reader(['de', 'fr', 'it'], gpu=False, download_enabled=True)
+    results = reader.readtext(image)
     return results
 
 def process_single_image(image_path):

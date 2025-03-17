@@ -67,12 +67,6 @@ def encode_image_to_base64(image):
     _, buffer = cv2.imencode('.jpg', image)
     return base64.b64encode(buffer).decode('utf-8')
     
-def enhance_image(image):
-    """Enhance image for better OCR processing."""
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    denoised = cv2.bilateralFilter(gray, 9, 75, 75)
-    enhanced = cv2.convertScaleAbs(denoised, alpha=1.5, beta=10)
-    return enhanced
 
 def create_annotated_image(image, results):
     """Create annotated image with detected text regions."""

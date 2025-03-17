@@ -21,7 +21,7 @@ RUN python -c 'from easyocr import Reader; Reader(["de", "fr", "it"], gpu=False)
 COPY . .
 
 # Create directories if they don't exist
-RUN mkdir -p detected_images enhanced detected_results ids card_data
+RUN mkdir -p detected_images  detected_results ids card_data
 
 # Expose the port the app runs on
 EXPOSE 8000
