@@ -175,6 +175,17 @@ def extract_card_info(results):
                     if not any(c.isdigit() for c in next_text):  # No digits in insurance name
                         detected_values['insurance_name'] = next_text.split()[0]
         
+        # Alternative detection for insurance code and name without hyphen
+        # Look for patterns like "01509 Sanitas" in a single text string
+        elif prob > 0.6 and len(text.split()) >= 2:
+            words = text.split()
+            # Check if first part looks like an insurance code (4-5 digits)
+            if words[0].isdigit() and len(words[0]) in (4, 5):
+                detected_values['insurance_code'] = words[0]
+                # Rest could be the insurance name
+                if len(words) > 1 and words[1][0].isupper():
+                    detected_values['insurance_name'] = words[1]
+        
         # Card number detection - typically starts with "80756" followed by many digits
         if text.startswith("80756") and len(text) > 15 and prob > 0.7:
             detected_values['card_number'] = text
@@ -198,6 +209,39 @@ def extract_card_info(results):
             except (ValueError, TypeError):
                 # Skip invalid dates
                 pass
+    
+    # Post-processing: If we have a personal number but no insurance code/name,
+    # look for them in the results that appear after the personal number
+    if 'personal_number' in detected_values and ('insurance_code' not in detected_values or 'insurance_name' not in detected_values):
+        # Find the index of the result containing the personal number
+        personal_number_idx = None
+        for idx, result in enumerate(results):
+            if detected_values['personal_number'] in result[1]:
+                personal_number_idx = idx
+                break
+        
+        if personal_number_idx is not None:
+            # Look at the next few results after the personal number
+            for i in range(personal_number_idx + 1, min(personal_number_idx + 5, len(results))):
+                text = results[i][1].strip()
+                prob = results[i][2]
+                
+                # Check for insurance code (4-5 digit number)
+                if 'insurance_code' not in detected_values and prob > 0.5:
+                    digits = ''.join(filter(str.isdigit, text))
+                    if len(digits) in (4, 5):
+                        detected_values['insurance_code'] = digits
+                        # If the text has more than just digits, the rest might be the insurance name
+                        non_digits = ''.join(c for c in text if not c.isdigit()).strip()
+                        if non_digits and non_digits[0].isupper():
+                            detected_values['insurance_name'] = non_digits.split()[0]
+                        continue
+                
+                # Check for insurance name (capitalized word with no digits)
+                if 'insurance_name' not in detected_values and prob > 0.5:
+                    if text and text[0].isupper() and not any(c.isdigit() for c in text):
+                        detected_values['insurance_name'] = text.split()[0]
+                        continue
     
     # Sort potential names by vertical (y) position first, then horizontal (x) position
     potential_names.sort(key=lambda x: (x[1], x[2]))
@@ -281,7 +325,7 @@ def process_single_image(image_path):
         print(f"\nExtracted Card Information for {os.path.basename(image_path)}:")
         # Custom printing order to ensure names are displayed first
         display_order = ['surname', 'first_name', 'birth_date', 'personal_number', 'insurance_code', 
-                         'insurance_name', 'card_number', 'expiry_date', 'detected_language']
+                         'insurance_name', 'card_number', 'expiry_date', 'insurance_number', 'detected_language', ]
         card_dict = card_info.to_dict()
         for key in display_order:
             if card_dict.get(key):
